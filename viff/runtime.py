@@ -1007,7 +1007,6 @@ def create_runtime(id, players, threshold, options=None, runtime_class=None):
     Please see the example applications for more examples.
 
     """
-
     if options and options.track_memory:
         lc = LoopingCall(track_memory_usage)
         # Five times per second seems like a fair value. Besides, the
@@ -1093,7 +1092,7 @@ def create_runtime(id, players, threshold, options=None, runtime_class=None):
         listen = lambda port: reactor.listenSSL(port, factory, ctx_factory)
         connect = lambda host, port: reactor.connectSSL(host, port, factory, ctx_factory)
     else:
-        print "Not using SSL~~~"
+        print "Not using SSL"
         listen = lambda port: reactor.listenTCP(port, factory)
         connect = lambda host, port: reactor.connectTCP(host, port, factory)
 

@@ -24,7 +24,6 @@ READY    = 2
 SEND     = 3
 PAILLIER = 4
 TEXT     = 5
-SHARELIST= 6
 
 # Used by the HashBroadcastMixin
 INCONSISTENTHASH = 6

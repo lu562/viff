@@ -20,13 +20,13 @@
 """Passively secure VIFF runtime."""
 
 import operator
-import sys
+
 from viff import shamir
 from viff.runtime import Runtime, Share, ShareList, gather_shares, preprocess
 from viff.prss import prss, prss_lsb, prss_zero, prss_multi
 from viff.field import GF256, FieldElement
 from viff.util import rand, profile
-from viff.constants import SHARE
+
 from twisted.internet.defer import gatherResults
 
 
@@ -68,7 +68,6 @@ class PassiveRuntime(Runtime):
         Communication cost: every player sends one share to each
         receiving player.
         """
-
         assert isinstance(share, Share)
         # all players receive result by default
         if receivers is None:
@@ -108,7 +107,6 @@ class PassiveRuntime(Runtime):
                 return recombine(deferreds)
 
         result = share.clone()
-
         self.schedule_callback(result, exchange)
 
         # do actual communication
@@ -116,76 +114,6 @@ class PassiveRuntime(Runtime):
 
         if self.id in receivers:
             return result
-
-    def open_multi(self, sharelist, receivers=None, threshold=None):
-        """Open multiple secret sharings at one time.
-
-        The *receivers* are the players that will eventually obtain
-        the opened result. The default is to let everybody know the
-        result. By default the :attr:`threshold` + 1 shares are
-        reconstructed, but *threshold* can be used to override this.
-
-        Communication cost: every player sends one share to each
-        receiving player.
-        """
-	print "right place!"
-        # all players receive result by default
-        if receivers is None:
-            receivers = self.players.keys()
-        if threshold is None:
-            threshold = self.threshold
-
-        def filter_good_shares(results):
-            # Filter results, which is a list of (success, share)
-            # pairs.
-            return [result[1] for result in results
-                    if result is not None and result[0]][:threshold+1]
-
-        def recombine(shares):
-            assert len(shares) > threshold
-	    re = []
-	    for i in shares:
-		    result = ShareList(i, threshold+1)
-		    result.addCallback(filter_good_shares)
-		    result.addCallback(shamir.recombine)
-
-		    re.append(result)
-            return re
-
-        def exchange(sharelist):
-            # Send share to all receivers.
-            for peer_id in receivers:
-                if peer_id != self.id:
-                    pc = tuple(self.program_counter)
-		    self.protocols[peer_id].sendData(pc,SHARE, sharelist)
-            # Receive and recombine shares if this player is a receiver.
-            if self.id in receivers:
-                deferreds = []
-                for peer_id in self.players:
-                    if peer_id == self.id:
-			d = []
-			for share in sharelist:
-                        	e = Share(self, share.field, (share.field(peer_id), share))
-				d.appends(e)
-                    else:
-                        d = self._expect_share(peer_id, share.field)
-                        d.addCallback(lambda s, peer_id: (s.field(peer_id), s), peer_id)
-                    deferreds.append(d)
-                return recombine(deferreds)
-	re = []
-	for d in share list:
-		e = d.clone();
-		re.append(e);
-
-        self.schedule_callback(re, exchange)
-
-        # do actual communication
-        self.activate_reactor()
-
-        if self.id in receivers:
-            return result
-
-
 
     @profile
     def add(self, share_a, share_b):
@@ -600,7 +528,6 @@ class PassiveRuntime(Runtime):
 
         Communication cost: n elements transmitted.
         """
-	
         assert number is None or self.id in inputters
         if threshold is None:
             threshold = self.threshold
