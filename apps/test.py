@@ -144,6 +144,10 @@ class Protocol:
 					self.matrix[m-n][n] = (-1) * results[0] * sum + self.matrix[m][0]
 	print "calculation finished"
 	record_stop()
+ 	runtime.schedule_callback(results, lambda _: runtime.synchronize())
+        # The next callback shuts the runtime down, killing the
+        # connections between the players.
+    runtime.schedule_callback(results, lambda _: runtime.shutdown())	
 	for i in range(1 , self.k + 1):	
 		self.openmatrix[i][0] = self.runtime.open(self.matrix[i][0])
 
