@@ -60,10 +60,12 @@ def record_stop():
     stop = time.time()
     print
     print "Total time used: %.3f sec" % (stop-start)
+    '''
     if runtime.id == 1:
         f = open('time.txt', 'w')
         f.write(stop-start)
         f.close()
+    '''
     print "*" * 64
     #return x
 
@@ -72,7 +74,7 @@ class Protocol:
     def __init__(self, runtime):
         # Save the Runtime for later use
         self.runtime = runtime
-	self.k = 128
+	self.k = 64
 	self.b = 2
 
 	self.matrix = [[0 for x in range(self.k + 1)] for y in range(self.k + 1)]
@@ -114,6 +116,9 @@ class Protocol:
 
 	results.addCallback(self.preprocess_ready)
 
+
+
+
     def preprocess_ready(self, results):
 	print "ready!"
 	record_start()
@@ -121,7 +126,7 @@ class Protocol:
 	self.matrix[1][0] = self.a
 	self.matrix[1][1] = self.matrix[1][0] * self.matrix[0][1]
 	#print  "%d"%results[0]
-	print  results[1]
+	#print  results[1]
 	for m in range(2,self.k+1):
 		for n in range(0,m):
 			if m == 2 and n == 1:
@@ -144,27 +149,29 @@ class Protocol:
 					self.matrix[m-n][n] = (-1) * results[0] * sum + self.matrix[m][0]
 	print "calculation finished"
 	record_stop()
- 	runtime.schedule_callback(results, lambda _: runtime.synchronize())
-        # The next callback shuts the runtime down, killing the
-        # connections between the players.
-    runtime.schedule_callback(results, lambda _: runtime.shutdown())	
+
 	for i in range(1 , self.k + 1):	
 		self.openmatrix[i][0] = self.runtime.open(self.matrix[i][0])
 
 	print "reconstruction finished"
 	list = [self.openmatrix[i][0] for i in range(1,self.k + 1)]
 
-	#results = gather_shares(list)
+	results = gather_shares(list)
 
-	#results.addCallback(self.calculation_ready)
-	#results.addCallback(record_stop)
+	results.addCallback(self.calculation_ready)
+
+	self.runtime.schedule_callback(results, lambda _: self.runtime.synchronize())
+        self.runtime.schedule_callback(results, lambda _: self.runtime.shutdown())
+
 
     def calculation_ready(self, results):
 	print "ready to print"
 	#print self.openmatrix
-	for i in range(1,self.k+1):
-		print self.openmatrix[i][0]
-  
+	#for i in range(1,self.k+1):
+		#print self.openmatrix[i][0]
+	#return results
+
+
 		
 
 # Parse command line arguments.
