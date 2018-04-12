@@ -74,7 +74,7 @@ class Protocol:
     def __init__(self, runtime):
         # Save the Runtime for later use
         self.runtime = runtime
-	self.k = 64
+	self.k = 256
 	self.b = 2
 
 	self.matrix = [[0 for x in range(self.k + 1)] for y in range(self.k + 1)]
