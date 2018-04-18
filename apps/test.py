@@ -92,13 +92,14 @@ class Protocol:
 	else:
 	    a = runtime.shamir_share([1], Zp)
 	self.a = a
+	record_start()
 	for i in range(self.k + 1):
 		if runtime.id == 1:
 	    		self.matrix[0][i] = self.runtime.shamir_share([1], Zp, self.b**i)
 		else:
 	    		self.matrix[0][i] = self.runtime.shamir_share([1], Zp)
 		
-
+	record_stop()
 
 
 	for i in range(self.k + 1):
@@ -121,7 +122,7 @@ class Protocol:
 
     def preprocess_ready(self, results):
 	print "ready!"
-	record_start()
+	#record_start()
 	print "what"
 	self.matrix[1][0] = self.a
 	self.matrix[1][1] = self.matrix[1][0] * self.matrix[0][1]
@@ -148,7 +149,7 @@ class Protocol:
 						sum = sum + self.matrix[m-n+p][n-1-p]
 					self.matrix[m-n][n] = (-1) * results[0] * sum + self.matrix[m][0]
 	print "calculation finished"
-	record_stop()
+	#record_stop()
 
 	for i in range(1 , self.k + 1):	
 		self.openmatrix[i][0] = self.runtime.open(self.matrix[i][0])
