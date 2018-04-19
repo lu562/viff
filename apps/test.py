@@ -42,6 +42,8 @@ from viff.runtime import create_runtime, gather_shares
 from viff.comparison import Toft05Runtime
 from viff.config import load_config
 from viff.util import rand, find_prime
+from viff.active import TriplesHyperinvertibleMatricesMixin
+
 import sys   
 sys.setrecursionlimit(2000000)
 # We start by defining the protocol, it will be started at the bottom
@@ -56,7 +58,7 @@ def record_start():
 
 
 def record_stop():
-    print "am I here?"
+    
     stop = time.time()
     print
     print "Total time used: %.3f sec" % (stop-start)
@@ -74,8 +76,9 @@ class Protocol:
     def __init__(self, runtime):
         # Save the Runtime for later use
         self.runtime = runtime
-	self.k = 64
+	self.k = 128
 	self.b = 2
+	self.threshold = 1
 
 	self.matrix = [[0 for x in range(self.k + 1)] for y in range(self.k + 1)]
 	self.openmatrix =[[0 for x in range(self.k + 1)] for y in range(self.k + 1)]
@@ -85,32 +88,42 @@ class Protocol:
         self.target = 3
         
 
-	Zp = GF(find_prime(2**271))
+	Zp = GF(find_prime(2**64))
 
 	if runtime.id == 1:
 	    a = runtime.shamir_share([1], Zp, self.target)
 	else:
 	    a = runtime.shamir_share([1], Zp)
 	self.a = a
-	record_start()
+	'''
 	for i in range(self.k + 1):
 		if runtime.id == 1:
 	    		self.matrix[0][i] = self.runtime.shamir_share([1], Zp, self.b**i)
 		else:
 	    		self.matrix[0][i] = self.runtime.shamir_share([1], Zp)
 		
-	record_stop()
-
-
-	for i in range(self.k + 1):
+	'''
+	record_start()
+	#self.matrix[0][1] = TriplesHyperinvertibleMatricesMixin.single_share_random(1,self.threshold,Zp)
+	if runtime.id == 1:
+		self.matrix[0][0] = self.runtime.shamir_share([1], Zp,0)
+		self.matrix[0][1] = self.runtime.shamir_share([1], Zp, self.b)
+	else:
+		self.matrix[0][0] = self.runtime.shamir_share([1], Zp)
+		self.matrix[0][1] = self.runtime.shamir_share([1], Zp)
+	for i in range(2,self.k + 1):
+		self.matrix[0][i] = self.matrix[0][i - 1] * self.matrix[0][1]
 		
+	#record_stop()
+
+	for i in range(self.k + 1):		
 		self.openmatrix[0][i] = self.runtime.open(self.matrix[0][i])
-		
+
 
 		
 
-	self.prefix = runtime.open(a - self.matrix[0][1])
-
+	self.prefix = self.runtime.open(a - self.matrix[0][1])
+	
 	list = [self.prefix,a]
 	list = list + [self.openmatrix[0][i] for i in range(self.k + 1)]
 	results = gather_shares(list)
@@ -123,6 +136,7 @@ class Protocol:
     def preprocess_ready(self, results):
 	print "ready!"
 	#record_start()
+	record_stop()
 	print "what"
 	self.matrix[1][0] = self.a
 	self.matrix[1][1] = self.matrix[1][0] * self.matrix[0][1]
