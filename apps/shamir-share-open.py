@@ -41,20 +41,16 @@ def protocol(rt):
     print
 
     a, b, c = rt.shamir_share([1, 2, 3], Zp, input)
-    list = []
-    list.append(a)
-    list.append(b)
-    list.append(c)
 
+    a = rt.open(a)
+    b = rt.open(b)
+    c = rt.open(c)
 
+    dprint("### opened a: %s ###", a)
+    dprint("### opened b: %s ###", b)
+    dprint("### opened c: %s ###", c)
 
-    re = rt.open_multi(list)
-    print "zone"
-
-
-
-
-    rt.wait_for(re)
+    rt.wait_for(a, b, c)
 
 
 pre_runtime = create_runtime(id, players, 1)
