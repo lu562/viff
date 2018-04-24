@@ -1,35 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright 2007, 2008 VIFF Development Team.
-#
-# This file is part of VIFF, the Virtual Ideal Functionality Framework.
-#
-# VIFF is free software: you can redistribute it and/or modify it
-# under the terms of the GNU Lesser General Public License (LGPL) as
-# published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
-#
-# VIFF is distributed in the hope that it will be useful, but WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-# or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
-# Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public
-# License along with VIFF. If not, see <http://www.gnu.org/licenses/>.
 
-# This example is a tribute to the original example of secure
-# multi-party computation by Yao in 1982. In his example two
-# millionaires meet in the street and they want to securely compare
-# their fortunes. They want to do so without revealing how much they
-# own to each other. This problem would be easy to solve if both
-# millionaires trust a common third party, but we want to solve it
-# without access to a third party.
-#
-# In this example the protocol is run between three millionaires and
-# uses a protocol for secure integer comparison by Toft from 2005.
-#
-# Give a player configuration file as a command line argument or run
-# the example with '--help' for help with the command line options.
 
 from optparse import OptionParser
 import viff.reactor
@@ -38,12 +9,17 @@ from twisted.internet import reactor
 
 from viff.field import GF
 import time
-from viff.runtime import create_runtime, gather_shares
+from viff.runtime import create_runtime, gather_shares,Share
 from viff.comparison import Toft05Runtime
+from viff.passive import PassiveRuntime
+from viff.active import ActiveRuntime
 from viff.config import load_config
 from viff.util import rand, find_prime
 from viff.active import TriplesHyperinvertibleMatricesMixin
-
+from pympler import asizeof
+from pympler import summary
+from pympler import muppy
+from pympler import tracker
 import sys   
 sys.setrecursionlimit(2000000)
 # We start by defining the protocol, it will be started at the bottom
@@ -76,25 +52,28 @@ class Protocol:
     def __init__(self, runtime):
         # Save the Runtime for later use
         self.runtime = runtime
-	self.k = 128
+	self.tr = tracker.SummaryTracker();
+	self.k = 64
 	self.b = 2
 	self.threshold = 1
+	Zp = GF(find_prime(2**64))
 
 	self.matrix = [[0 for x in range(self.k + 1)] for y in range(self.k + 1)]
 	self.openmatrix =[[0 for x in range(self.k + 1)] for y in range(self.k + 1)]
 	self.prefix = 0
-
+	 
         # This is the value we will use in the protocol.
         self.target = 3
         
 
-	Zp = GF(find_prime(2**64))
-
+	
+	
 	if runtime.id == 1:
-	    a = runtime.shamir_share([1], Zp, self.target)
+	    self.a = runtime.shamir_share([1], Zp, self.target)
 	else:
-	    a = runtime.shamir_share([1], Zp)
-	self.a = a
+	    self.a = runtime.shamir_share([1], Zp)
+	print "share allocated"
+
 	'''
 	for i in range(self.k + 1):
 		if runtime.id == 1:
@@ -103,7 +82,8 @@ class Protocol:
 	    		self.matrix[0][i] = self.runtime.shamir_share([1], Zp)
 		
 	'''
-	record_start()
+
+
 	#self.matrix[0][1] = TriplesHyperinvertibleMatricesMixin.single_share_random(1,self.threshold,Zp)
 	if runtime.id == 1:
 		self.matrix[0][0] = self.runtime.shamir_share([1], Zp,0)
@@ -111,37 +91,36 @@ class Protocol:
 	else:
 		self.matrix[0][0] = self.runtime.shamir_share([1], Zp)
 		self.matrix[0][1] = self.runtime.shamir_share([1], Zp)
+ 
 	for i in range(2,self.k + 1):
 		self.matrix[0][i] = self.matrix[0][i - 1] * self.matrix[0][1]
 		
-	#record_stop()
-
+	print "triple generated"
+	'''
 	for i in range(self.k + 1):		
 		self.openmatrix[0][i] = self.runtime.open(self.matrix[0][i])
 
-
+	'''
 		
 
-	self.prefix = self.runtime.open(a - self.matrix[0][1])
+	self.prefix = self.runtime.open(self.a - self.matrix[0][1])
 	
-	list = [self.prefix,a]
-	list = list + [self.openmatrix[0][i] for i in range(self.k + 1)]
+	list = [self.prefix]
 	results = gather_shares(list)
-
 	results.addCallback(self.preprocess_ready)
 
 
-
-
     def preprocess_ready(self, results):
+	 
 	print "ready!"
-	#record_start()
-	record_stop()
-	print "what"
+	Zp = GF(find_prime(2**64))
 	self.matrix[1][0] = self.a
 	self.matrix[1][1] = self.matrix[1][0] * self.matrix[0][1]
 	#print  "%d"%results[0]
 	#print  results[1]
+	print self.matrix[0][4]
+	
+	self.tr.print_diff() 
 	for m in range(2,self.k+1):
 		for n in range(0,m):
 			if m == 2 and n == 1:
@@ -153,27 +132,40 @@ class Protocol:
 					sum = 0
 					for p in range(0,m-n):
 						sum = sum + self.matrix[m-n-1-p][n+p]
+						#self.tr.print_diff() 
+						
 					self.matrix[m-n][n] = results[0] * sum + self.matrix[0][m]
 					
 				else:
-					#print "once here?lol[%d,%d]"%(m-n,n)
+					#print "once here?lol[%d,%d]"%(m-n,n)					
 					sum = 0
-
 					for p in range(0,n):
 						sum = sum + self.matrix[m-n+p][n-1-p]
+						#self.tr.print_diff() 
 					self.matrix[m-n][n] = (-1) * results[0] * sum + self.matrix[m][0]
 	print "calculation finished"
+	
+	self.tr.print_diff() 
+
+	#all_objects = muppy.get_objects()
+	#sum1 = summary.summarize(all_objects)
+	#summary.print_(sum1) 
 	#record_stop()
 
 	for i in range(1 , self.k + 1):	
 		self.openmatrix[i][0] = self.runtime.open(self.matrix[i][0])
+	
 
 	print "reconstruction finished"
+	
 	list = [self.openmatrix[i][0] for i in range(1,self.k + 1)]
+
+
 
 	results = gather_shares(list)
 
 	results.addCallback(self.calculation_ready)
+	
 
 	self.runtime.schedule_callback(results, lambda _: self.runtime.synchronize())
         self.runtime.schedule_callback(results, lambda _: self.runtime.shutdown())
@@ -200,7 +192,7 @@ else:
     id, players = load_config(args[0])
 
 # Create a deferred Runtime and ask it to run our protocol when ready.
-pre_runtime = create_runtime(id, players, 1, options, Toft05Runtime)
+pre_runtime = create_runtime(id, players, 1, options,ActiveRuntime)
 pre_runtime.addCallback(Protocol)
 
 # Start the Twisted event loop.
