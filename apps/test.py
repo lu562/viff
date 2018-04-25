@@ -105,7 +105,7 @@ class Protocol:
 	    		self.matrix[0][i] = self.runtime.shamir_share([1], Zp)
 
 	'''
-	record_start()
+
 	#self.matrix[0][1] = TriplesHyperinvertibleMatricesMixin.single_share_random(1,self.threshold,Zp)
 	if runtime.id == 1:
 		self.matrix[0][0] = self.runtime.shamir_share([1], Zp,0)
@@ -122,22 +122,30 @@ class Protocol:
 		self.openmatrix[0][i] = self.runtime.open(self.matrix[0][i])
 
 
+	self.matrix[1][0] = self.a
+	self.matrix[1][1] = self.matrix[1][0] * self.matrix[0][1]
 
 
 	self.prefix = self.runtime.open(a - self.matrix[0][1])
 
-	list1 = [self.prefix,a]
-	list1 = list1 + [self.openmatrix[0][i] for i in range(self.k + 1)]
+	list1 = [self.prefix,a,self.matrix[1][1]]
+	list1 = list1 + [self.matrix[0][i] for i in range(1,self.k + 1)]
         print len(list1)
-        results = list1
+        #results = list1
 
+        results = gather_shares(list1)
+        results.addCallback(self.preprocess_ready)
+
+
+
+
+    def preprocess_ready(self,results):
 	print "ready!"
-	#record_start()
+	record_start()
 
-
-	self.matrix[1][0] = self.a
-	self.matrix[1][1] = self.matrix[1][0] * self.matrix[0][1]
-	#print  "%d"%results[0]
+	#self.matrix[1][0] = self.a
+	#self.matrix[1][1] = self.matrix[1][0] * self.matrix[0][1]
+	print  
 	#print  results[1]
         # print ("K", self.k)
 	for m in xrange(2, self.k+1):
@@ -150,16 +158,16 @@ class Protocol:
 					#print "once here?[%d,%d]"%(m-n,n)
 					sum = 0
 					for p in range(0,m-n):
-						sum = sum + self.matrix[m-n-1-p][n+p]
-					self.matrix[m-n][n] = results[0] * sum + self.matrix[0][m]
+						sum = sum + self.matrix[m-n-1-p][n+p].result
+					self.matrix[m-n][n] = self.prefix.result * sum + self.matrix[0][m]
 
 				else:
 					#print "once here?lol[%d,%d]"%(m-n,n)
 					sum = 0
 
 					for p in range(0,n):
-						sum = sum + self.matrix[m-n+p][n-1-p]
-					self.matrix[m-n][n] = (-1) * results[0] * sum + self.matrix[m][0]
+						sum = sum + self.matrix[m-n+p][n-1-p].result
+					self.matrix[m-n][n] = (-1) * self.prefix.result * sum + self.matrix[m][0]
 	print "calculation finished"
         record_stop()
 
@@ -168,62 +176,16 @@ class Protocol:
 
         print "reconstruction finished"
         list1 = [self.openmatrix[i][0] for i in range(1,self.k + 1)]
-        list1 = map(runtime.open, list1)
+        #list1 = map(runtime.open, list1)
         results = gather_shares(list1)
         results.addCallback(self.calculation_ready)
 
         self.runtime.schedule_callback(results, lambda _: self.runtime.synchronize())
         self.runtime.schedule_callback(results, lambda _: self.runtime.shutdown())
 
-        # results.addCallback(self.preprocess_ready)
 
 
 
-
-    def preprocess_ready(self, results):
-	print "ready!"
-	#record_start()
-	record_stop()
-	print "what"
-	self.matrix[1][0] = self.a
-	self.matrix[1][1] = self.matrix[1][0] * self.matrix[0][1]
-	#print  "%d"%results[0]
-	#print  results[1]
-	for m in range(2,self.k+1):
-		for n in range(0,m):
-			if m == 2 and n == 1:
-				print "[ab] already calculated"
-
-			else:
-				if (m - n) != 1 :
-					#print "once here?[%d,%d]"%(m-n,n)
-					sum = 0
-					for p in range(0,m-n):
-						sum = sum + self.matrix[m-n-1-p][n+p]
-					self.matrix[m-n][n] = results[0] * sum + self.matrix[0][m]
-
-				else:
-					#print "once here?lol[%d,%d]"%(m-n,n)
-					sum = 0
-
-					for p in range(0,n):
-						sum = sum + self.matrix[m-n+p][n-1-p]
-					self.matrix[m-n][n] = (-1) * results[0] * sum + self.matrix[m][0]
-	print "calculation finished"
-	#record_stop()
-
-	# for i in range(1 , self.k + 1):
-		# self.openmatrix[i][0] = self.runtime.open(self.matrix[i][0])
-
-	# print "reconstruction finished"
-	# list = [self.openmatrix[i][0] for i in range(1,self.k + 1)]
-
-	# results = gather_shares(list)
-
-	# results.addCallback(self.calculation_ready)
-
-	# self.runtime.schedule_callback(results, lambda _: self.runtime.synchronize())
-        # self.runtime.schedule_callback(results, lambda _: self.runtime.shutdown())
 
 
     def calculation_ready(self, results):
