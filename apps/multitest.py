@@ -78,7 +78,7 @@ class Protocol:
     def __init__(self, runtime):
         # Save the Runtime for later use
         self.runtime = runtime
-	self.k = 32
+	self.k = 64
 	self.b = 2
 	self.threshold = 1
 
@@ -139,6 +139,7 @@ class Protocol:
 
     def preprocess_ready(self,results,cnt):
 	print "ready! with value %d"%(cnt)
+	print results[0]
 	#record_start()
 	'''
 	for m in xrange(2, self.k+1):
@@ -216,7 +217,10 @@ class Protocol:
 					for p in range(0,m-n):
 						sum = sum + self.matrix[m-n-1-p][n+p].result
 
-					self.matrix[m-n][n] = self.prefix.result * sum + self.matrix[0][m]
+					self.matrix[m-n][n] = results[0] * sum + self.matrix[0][m]
+					#print self.prefix.result
+					#print self.matrix[0][m].result
+					#print sum
 					#print self.matrix[m-n][n]
 				else:
 					#print "[%d,%d]"%(m-n,n)
@@ -224,7 +228,9 @@ class Protocol:
 
 					for p in range(0,n):
 						sum = sum + self.matrix[m-n+p][n-1-p].result
-					self.matrix[m-n][n] = (-1) * self.prefix.result * sum + self.matrix[m][0]
+					self.matrix[m-n][n] = (-1) * results[0] * sum + self.matrix[m][0]
+
+					#print sum
 					#print self.matrix[m-n][n]
 	print "calculation finished %d"%(cnt)
 	for i in range(1,self.k + 1 ):
